@@ -7,6 +7,8 @@
 #include <random>
 #include <algorithm>
 #include <assert.h>
+#include <thread>
+#include <chrono>
 
 #include "types.h"
 #include "scrambled_zipfian_int_distribution.h"
@@ -16,12 +18,17 @@
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
 
-void print_progress(float percentage) {
-    int val = (int) (percentage * 100);
-    int lpad = (int) (percentage * PBWIDTH);
-    int rpad = PBWIDTH - lpad;
-    printf("\r%.2f%% [%.*s%*s]", percentage*100, lpad, PBSTR, rpad, "");
-    fflush(stdout);
+
+void print_progress(double *percentage) {
+    while((*percentage) < 1.0){
+        double val = (*percentage) * 100;
+        int lpad = (int) ((*percentage) * PBWIDTH);
+        int rpad = PBWIDTH - lpad;
+        printf("\r%.2f%% [%.*s%*s]", val, lpad, PBSTR, rpad, "");
+        fflush(stdout);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    std::cout << std::endl;
 }
 
 namespace workload {
@@ -203,7 +210,9 @@ void generate_export_requests(
 
     char value[MAX_VALUE_LEN+1];
     float total = n_records + n_operations;
-    float progress = 0;
+    double progress = 0;
+    
+    auto progress_thread = std::thread(print_progress, &progress);
 
     ofstream ofs(export_path, ofstream::out);
     for (size_t i = 0; i < n_records; i++)
@@ -215,7 +224,6 @@ void generate_export_requests(
         }
         ofs << endl;
         progress = i/total;
-        print_progress(progress);
     }
     
     for (int i = 0; i < n_operations; i++) {
@@ -254,10 +262,11 @@ void generate_export_requests(
 
 
         progress = (i+n_records)/total;
-        print_progress(progress);
 
        
     }
+    progress = 1.0;
+    progress_thread.join();
     cout << "number of writes/reads to keys: " << n_requests << endl; 
     cout << "Generated into " << export_path  << endl; 
     ofs.flush();

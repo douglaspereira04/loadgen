@@ -17,7 +17,7 @@ workload.insert_proportion = 0.0
 workload.min_scan_length = 1
 workload.max_scan_length = 10
 
-workload.gen_values = true
+workload.gen_values = false
 workload.value_min_size = 3840
 workload.value_max_size = 4352
 
