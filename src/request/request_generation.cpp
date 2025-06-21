@@ -217,7 +217,7 @@ void generate_export_requests(
     ofstream ofs(export_path, ofstream::out);
     for (size_t i = 0; i < n_records; i++)
     {
-        ofs << static_cast<int>(WRITE) << "," << i;
+        ofs << static_cast<int>(WRITE) << "," << std::setfill('0') << std::setw(10) << i;
         if (gen_values) {
             gen_value(value, &char_generator, &len_generator);
             ofs << "," << value;
@@ -248,18 +248,17 @@ void generate_export_requests(
         }
 
         if (type == Type::READ) {
-            ofs << type << "," << key << endl;
+            ofs << type << "," << std::setfill('0') << std::setw(10) << key << endl;
         } else if (type == Type::WRITE) {
-            ofs << type << "," << key;
+            ofs << type << "," << std::setfill('0') << std::setw(10) << key;
             if (gen_values) {
                 gen_value(value, &char_generator, &len_generator);
                 ofs << "," << value;
             }
             ofs << endl;
         } else if (type == Type::SCAN) {
-            ofs << type << "," << key << "," << size << endl;
+            ofs << type << "," << std::setfill('0') << std::setw(10) << key << "," << size << endl;
         }
-
 
         progress = (i+n_records)/total;
 
