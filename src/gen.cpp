@@ -1,11 +1,5 @@
-#include <iostream>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string>
-#include <string.h>
-#include <sstream>
-#include "request_generation.h"
-#include "types.h"
+#include "request/export_request_generator.h"
 
 int
 main(int argc, char const *argv[])
@@ -14,12 +8,8 @@ main(int argc, char const *argv[])
 		exit(1);
 	}
 
-	const auto config = toml::parse(argv[1]);
+	workload::RequestGenerator generator(argv[1]);
+	generator.generate_to_file();
 
-	auto export_path = toml::find<std::string>(
-		config, "output", "requests", "export_path"
-	);
-	workload::create_requests(argv[1]);
-	
-	
+	return 0;
 }
