@@ -158,15 +158,15 @@ void RequestGenerator::init() {
 
     if (config_.read_proportion > 0) {
         operation_proportions_.push_back(
-            make_pair(Type::READ, config_.read_proportion));
+            make_pair(loadgen::types::Type::READ, config_.read_proportion));
     }
     if (config_.update_proportion > 0) {
         operation_proportions_.push_back(
-            make_pair(Type::UPDATE, config_.update_proportion));
+            make_pair(loadgen::types::Type::UPDATE, config_.update_proportion));
     }
     if (config_.insert_proportion > 0) {
         operation_proportions_.push_back(
-            make_pair(Type::WRITE, config_.insert_proportion));
+            make_pair(loadgen::types::Type::WRITE, config_.insert_proportion));
     }
 
     Distribution data_distribution = str_to_dist(config_.data_distribution);
@@ -190,7 +190,7 @@ void RequestGenerator::init() {
 
     if (config_.scan_proportion > 0) {
         operation_proportions_.push_back(
-            make_pair(Type::SCAN, config_.scan_proportion));
+            make_pair(loadgen::types::Type::SCAN, config_.scan_proportion));
 
         Distribution scan_len_dist =
             str_to_dist(config_.scan_length_distribution);
@@ -219,8 +219,8 @@ void RequestGenerator::init() {
     n_requests_ = config_.n_operations;
 }
 
-Type RequestGenerator::next_operation(
-    std::vector<std::pair<Type, double>> values,
+loadgen::types::Type RequestGenerator::next_operation(
+    std::vector<std::pair<loadgen::types::Type, double>> values,
     rfunc::DoubleRandFunction *generator) {
     double sum = 0;
 
@@ -245,8 +245,8 @@ Type RequestGenerator::next_operation(
 // ────────────────────────────────────────────────────────────────────────
 // next()  –  returns true when the workload has ended
 // ────────────────────────────────────────────────────────────────────────
-bool RequestGenerator::next(Type &type, long &key, std::string &value,
-                            long &scan_size) {
+bool RequestGenerator::next(loadgen::types::Type &type, long &key,
+                            std::string &value, long &scan_size) {
     value.clear();
     scan_size = 0;
 
@@ -257,7 +257,7 @@ bool RequestGenerator::next(Type &type, long &key, std::string &value,
     // ── Loading phase: emit initial records (WRITE keys 0 … n_records-1) ──
     if (phase_ == Phase::LOADING) {
         if (loading_index_ < config_.n_records) {
-            type = Type::WRITE;
+            type = loadgen::types::Type::WRITE;
             key = loading_index_;
 
             if (config_.gen_values) {
@@ -283,27 +283,28 @@ bool RequestGenerator::next(Type &type, long &key, std::string &value,
             type =
                 next_operation(operation_proportions_, &operation_generator_);
 
-            if (type == Type::READ || type == Type::UPDATE) {
+            if (type == loadgen::types::Type::READ ||
+                type == loadgen::types::Type::UPDATE) {
                 do {
                     key = data_generator_();
                 } while (key >= insert_key_sequence_->last_value());
 
-                if (type == Type::UPDATE) {
-                    type = Type::WRITE;
+                if (type == loadgen::types::Type::UPDATE) {
+                    type = loadgen::types::Type::WRITE;
                 }
-            } else if (type == Type::SCAN) {
+            } else if (type == loadgen::types::Type::SCAN) {
                 long size = scan_length_generator_();
                 scan_size = size;
                 n_requests_ += (size - 1);
                 do {
                     key = data_generator_();
                 } while (key + size >= insert_key_sequence_->last_value());
-            } else if (type == Type::WRITE) {
+            } else if (type == loadgen::types::Type::WRITE) {
                 key = insert_key_sequence_->next();
             }
 
             // Generate a value for WRITE operations when gen_values is on
-            if (type == Type::WRITE && config_.gen_values) {
+            if (type == loadgen::types::Type::WRITE && config_.gen_values) {
                 char buf[MAX_VALUE_LEN + 1];
                 long length = len_generator_();
                 for (long i = 0; i < length; i++) {
@@ -342,17 +343,17 @@ void RequestGenerator::generate_to_file() {
 
     ofstream ofs(config_.export_path, ofstream::out);
 
-    Type type;
+    loadgen::types::Type type;
     long key;
     std::string value;
     long scan_size;
     long count = 0;
 
     while (!next(type, key, value, scan_size)) {
-        if (type == Type::READ) {
+        if (type == loadgen::types::Type::READ) {
             ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
                 << key << endl;
-        } else if (type == Type::WRITE) {
+        } else if (type == loadgen::types::Type::WRITE) {
             ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
                 << key;
             if (!value.empty()) {
@@ -360,7 +361,7 @@ void RequestGenerator::generate_to_file() {
             }
             ofs << endl;
             acknowledge(key);
-        } else if (type == Type::SCAN) {
+        } else if (type == loadgen::types::Type::SCAN) {
             ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
                 << key << "," << scan_size << endl;
         }

@@ -8,6 +8,7 @@
 
 #include "char_generator.h"
 #include "acknowledged_counter.h"
+#include "../types/types.h"
 
 namespace workload {
 
@@ -58,8 +59,9 @@ public:
     /// @param[in] values       The operation types and their probabilities.
     /// @param[in] generator    The generator for the operation.
     /// @return The next operation.
-    Type next_operation(std::vector<std::pair<Type, double>> values,
-                        rfunc::DoubleRandFunction *generator);
+    loadgen::types::Type
+    next_operation(std::vector<std::pair<loadgen::types::Type, double>> values,
+                   rfunc::DoubleRandFunction *generator);
 
     /// Get the next operation.
     /// @param[out] type       The operation type (READ, WRITE, SCAN).
@@ -70,7 +72,8 @@ public:
     /// operations).
     /// @return true if the workload has ended (no operation produced),
     ///         false if a valid operation was returned.
-    bool next(Type &type, long &key, std::string &value, long &scan_size);
+    bool next(loadgen::types::Type &type, long &key, std::string &value,
+              long &scan_size);
 
     /// Increment the acknowledged counter for the given key.
     /// Must be called by the user after a WRITE/INSERT is confirmed.
@@ -107,7 +110,7 @@ private:
     acknowledged_counter<long> *insert_key_sequence_;
 
     // ── Generators ─────────────────────────────────────────────────────
-    std::vector<std::pair<Type, double>> operation_proportions_;
+    std::vector<std::pair<loadgen::types::Type, double>> operation_proportions_;
     rfunc::RandFunction data_generator_;
     rfunc::RandFunction scan_length_generator_;
     rfunc::DoubleRandFunction operation_generator_;
