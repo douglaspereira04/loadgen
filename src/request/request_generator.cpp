@@ -28,28 +28,30 @@ using namespace rfunc;
 // ────────────────────────────────────────────────────────────────────────
 // Constructor from TOML file
 // ────────────────────────────────────────────────────────────────────────
-RequestGenerator::RequestGenerator(const std::string& config_path)
-    : insert_key_sequence_(nullptr),
-      phase_(Phase::LOADING),
-      loading_index_(0),
-      operations_index_(0),
-      n_requests_(0)
-{
+RequestGenerator::RequestGenerator(const std::string &config_path) :
+    phase_(Phase::LOADING), loading_index_(0), operations_index_(0),
+    n_requests_(0), insert_key_sequence_(nullptr) {
     const auto config = toml::parse(config_path);
 
-    export_path_ = toml::find<string>(config, "output", "requests", "export_path");
-    gen_values_  = toml::find<bool>(config, "workload", "gen_values");
+    export_path_ =
+        toml::find<string>(config, "output", "requests", "export_path");
+    gen_values_ = toml::find<bool>(config, "workload", "gen_values");
     value_min_size_ = toml::find<long>(config, "workload", "value_min_size");
     value_max_size_ = toml::find<long>(config, "workload", "value_max_size");
-    key_seed_       = toml::find<long>(config, "workload", "key_seed");
+    key_seed_ = toml::find<long>(config, "workload", "key_seed");
     operation_seed_ = toml::find<long>(config, "workload", "operation_seed");
-    n_records_      = toml::find<int>(config, "workload", "n_records");
-    n_operations_   = toml::find<int>(config, "workload", "n_operations");
-    data_distribution_str_ = toml::find<string>(config, "workload", "data_distribution");
-    read_proportion_   = toml::find<double>(config, "workload", "read_proportion");
-    update_proportion_ = toml::find<double>(config, "workload", "update_proportion");
-    insert_proportion_ = toml::find<double>(config, "workload", "insert_proportion");
-    scan_proportion_   = toml::find<double>(config, "workload", "scan_proportion");
+    n_records_ = toml::find<int>(config, "workload", "n_records");
+    n_operations_ = toml::find<int>(config, "workload", "n_operations");
+    data_distribution_str_ =
+        toml::find<string>(config, "workload", "data_distribution");
+    read_proportion_ =
+        toml::find<double>(config, "workload", "read_proportion");
+    update_proportion_ =
+        toml::find<double>(config, "workload", "update_proportion");
+    insert_proportion_ =
+        toml::find<double>(config, "workload", "insert_proportion");
+    scan_proportion_ =
+        toml::find<double>(config, "workload", "scan_proportion");
 
     scan_seed_ = 0;
     scan_length_distribution_str_ = "UNIFORM";
@@ -58,11 +60,12 @@ RequestGenerator::RequestGenerator(const std::string& config_path)
 
     if (scan_proportion_ > 0) {
         scan_seed_ = toml::find<long>(config, "workload", "scan_seed");
-        scan_length_distribution_str_ = toml::find<string>(
-            config, "workload", "scan_length_distribution"
-        );
-        min_scan_length_ = toml::find<int>(config, "workload", "min_scan_length");
-        max_scan_length_ = toml::find<int>(config, "workload", "max_scan_length");
+        scan_length_distribution_str_ =
+            toml::find<string>(config, "workload", "scan_length_distribution");
+        min_scan_length_ =
+            toml::find<int>(config, "workload", "min_scan_length");
+        max_scan_length_ =
+            toml::find<int>(config, "workload", "max_scan_length");
     }
 
     n_requests_ = n_operations_;
@@ -73,56 +76,31 @@ RequestGenerator::RequestGenerator(const std::string& config_path)
 // Constructor from explicit parameters
 // ────────────────────────────────────────────────────────────────────────
 RequestGenerator::RequestGenerator(
-    const std::string& export_path,
-    bool gen_values,
-    long value_min_size,
-    long value_max_size,
-    long key_seed,
-    long operation_seed,
-    int n_records,
-    int n_operations,
-    const std::string& data_distribution,
-    double read_proportion,
-    double update_proportion,
-    double insert_proportion,
-    double scan_proportion,
-    long scan_seed,
-    const std::string& scan_length_distribution,
-    int min_scan_length,
-    int max_scan_length
-)
-    : export_path_(export_path),
-      gen_values_(gen_values),
-      value_min_size_(value_min_size),
-      value_max_size_(value_max_size),
-      key_seed_(key_seed),
-      operation_seed_(operation_seed),
-      n_records_(n_records),
-      n_operations_(n_operations),
-      data_distribution_str_(data_distribution),
-      read_proportion_(read_proportion),
-      update_proportion_(update_proportion),
-      insert_proportion_(insert_proportion),
-      scan_proportion_(scan_proportion),
-      scan_seed_(scan_seed),
-      scan_length_distribution_str_(scan_length_distribution),
-      min_scan_length_(min_scan_length),
-      max_scan_length_(max_scan_length),
-      insert_key_sequence_(nullptr),
-      phase_(Phase::LOADING),
-      loading_index_(0),
-      operations_index_(0),
-      n_requests_(n_operations)
-{
+    const std::string &export_path, bool gen_values, long value_min_size,
+    long value_max_size, long key_seed, long operation_seed, int n_records,
+    int n_operations, const std::string &data_distribution,
+    double read_proportion, double update_proportion, double insert_proportion,
+    double scan_proportion, long scan_seed,
+    const std::string &scan_length_distribution, int min_scan_length,
+    int max_scan_length) :
+    export_path_(export_path), gen_values_(gen_values),
+    value_min_size_(value_min_size), value_max_size_(value_max_size),
+    key_seed_(key_seed), operation_seed_(operation_seed), n_records_(n_records),
+    n_operations_(n_operations), data_distribution_str_(data_distribution),
+    read_proportion_(read_proportion), update_proportion_(update_proportion),
+    insert_proportion_(insert_proportion), scan_proportion_(scan_proportion),
+    scan_seed_(scan_seed),
+    scan_length_distribution_str_(scan_length_distribution),
+    min_scan_length_(min_scan_length), max_scan_length_(max_scan_length),
+    phase_(Phase::LOADING), loading_index_(0), operations_index_(0),
+    n_requests_(n_operations), insert_key_sequence_(nullptr) {
     init();
 }
 
 // ────────────────────────────────────────────────────────────────────────
 // Destructor
 // ────────────────────────────────────────────────────────────────────────
-RequestGenerator::~RequestGenerator() {
-    delete insert_key_sequence_;
-}
+RequestGenerator::~RequestGenerator() { delete insert_key_sequence_; }
 
 // ────────────────────────────────────────────────────────────────────────
 // Shared initialisation (called from both constructors)
@@ -134,13 +112,16 @@ void RequestGenerator::init() {
 
     // Operation proportions
     if (read_proportion_ > 0) {
-        operation_proportions_.push_back(make_pair(Type::READ, read_proportion_));
+        operation_proportions_.push_back(
+            make_pair(Type::READ, read_proportion_));
     }
     if (update_proportion_ > 0) {
-        operation_proportions_.push_back(make_pair(Type::UPDATE, update_proportion_));
+        operation_proportions_.push_back(
+            make_pair(Type::UPDATE, update_proportion_));
     }
     if (insert_proportion_ > 0) {
-        operation_proportions_.push_back(make_pair(Type::WRITE, insert_proportion_));
+        operation_proportions_.push_back(
+            make_pair(Type::WRITE, insert_proportion_));
     }
 
     // Data distribution
@@ -149,59 +130,57 @@ void RequestGenerator::init() {
     if (data_distribution == UNIFORM) {
         data_generator_ = uniform_distribution_rand(0, n_records_, key_seed_);
     } else if (data_distribution == ZIPFIAN) {
-        int expectednewkeys = (int)((n_operations_) * insert_proportion_ * 2.0);
+        int expectednewkeys = (int)((n_operations_)*insert_proportion_ * 2.0);
         data_generator_ = scrambled_zipfian_distribution(
-            0, n_records_ + expectednewkeys, key_seed_
-        );
+            0, n_records_ + expectednewkeys, key_seed_);
     } else if (data_distribution == LATEST) {
-        zipfian_int_distribution<long>* zip =
-            new zipfian_int_distribution<long>(0, insert_key_sequence_->last_value());
-        data_generator_ = skewed_latest_distribution(
-            insert_key_sequence_, zip, key_seed_
-        );
-        //leaking
+        zipfian_int_distribution<long> *zip =
+            new zipfian_int_distribution<long>(
+                0, insert_key_sequence_->last_value());
+        data_generator_ =
+            skewed_latest_distribution(insert_key_sequence_, zip, key_seed_);
+        // leaking
     }
 
     // Scan generators
     if (scan_proportion_ > 0) {
-        operation_proportions_.push_back(make_pair(Type::SCAN, scan_proportion_));
+        operation_proportions_.push_back(
+            make_pair(Type::SCAN, scan_proportion_));
 
         Distribution scan_len_dist = str_to_dist(scan_length_distribution_str_);
         if (scan_len_dist == UNIFORM) {
             scan_length_generator_ = uniform_distribution_rand(
-                min_scan_length_, max_scan_length_, scan_seed_
-            );
+                min_scan_length_, max_scan_length_, scan_seed_);
         } else if (scan_len_dist == ZIPFIAN) {
-            scan_length_generator_ = scrambled_zipfian_distribution(
-                0, n_records_, scan_seed_
-            );
+            scan_length_generator_ =
+                scrambled_zipfian_distribution(0, n_records_, scan_seed_);
         }
     }
 
     // Operation type generator
-    operation_generator_ = uniform_double_distribution_rand(0.0, 1.0, operation_seed_);
+    operation_generator_ =
+        uniform_double_distribution_rand(0.0, 1.0, operation_seed_);
 
     // Value generators
     if (gen_values_) {
         char_generator_ = CharGenerator();
-        len_generator_  = uniform_distribution_rand(value_min_size_, value_max_size_);
+        len_generator_ =
+            uniform_distribution_rand(value_min_size_, value_max_size_);
     }
 
     // State
-    phase_            = Phase::LOADING;
-    loading_index_    = 0;
+    phase_ = Phase::LOADING;
+    loading_index_ = 0;
     operations_index_ = 0;
 }
 
-
 Type RequestGenerator::next_operation(
-    std::vector<std::pair<Type,double>> values, 
-    rfunc::DoubleRandFunction *generator
-) {
+    std::vector<std::pair<Type, double>> values,
+    rfunc::DoubleRandFunction *generator) {
     double sum = 0;
-    
+
     for (size_t i = 0; i < values.size(); i++) {
-       sum += values[i].second;
+        sum += values[i].second;
     }
 
     double val = (*generator)();
@@ -216,15 +195,13 @@ Type RequestGenerator::next_operation(
     }
 
     throw invalid_argument("Something went wrong");
-
 }
 
 // ────────────────────────────────────────────────────────────────────────
 // next()  –  returns true when the workload has ended
 // ────────────────────────────────────────────────────────────────────────
-bool RequestGenerator::next(
-    Type& type, long& key, std::string& value, long& scan_size
-) {
+bool RequestGenerator::next(Type &type, long &key, std::string &value,
+                            long &scan_size) {
     value.clear();
     scan_size = 0;
 
@@ -236,7 +213,7 @@ bool RequestGenerator::next(
     if (phase_ == Phase::LOADING) {
         if (loading_index_ < n_records_) {
             type = Type::WRITE;
-            key  = loading_index_;
+            key = loading_index_;
 
             if (gen_values_) {
                 char buf[MAX_VALUE_LEN + 1];
@@ -258,7 +235,8 @@ bool RequestGenerator::next(
     // ── Operations phase ──────────────────────────────────────────────
     if (phase_ == Phase::OPERATIONS) {
         if (operations_index_ < n_operations_) {
-            type = next_operation(operation_proportions_, &operation_generator_);
+            type =
+                next_operation(operation_proportions_, &operation_generator_);
 
             if (type == Type::READ || type == Type::UPDATE) {
                 do {
@@ -307,7 +285,6 @@ void RequestGenerator::acknowledge(long key) {
     insert_key_sequence_->acknowledge(key);
 }
 
-
 // ────────────────────────────────────────────────────────────────────────
 // generate_to_file()  –  dump full workload to the export file
 // ────────────────────────────────────────────────────────────────────────
@@ -328,20 +305,19 @@ void RequestGenerator::generate_to_file() {
 
     while (!next(type, key, value, scan_size)) {
         if (type == Type::READ) {
-            ofs << static_cast<int>(type) << ","
-                << setfill('0') << setw(10) << key << endl;
+            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
+                << key << endl;
         } else if (type == Type::WRITE) {
-            ofs << static_cast<int>(type) << ","
-                << setfill('0') << setw(10) << key;
+            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
+                << key;
             if (!value.empty()) {
                 ofs << "," << value;
             }
             ofs << endl;
             acknowledge(key);
         } else if (type == Type::SCAN) {
-            ofs << static_cast<int>(type) << ","
-                << setfill('0') << setw(10) << key
-                << "," << scan_size << endl;
+            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
+                << key << "," << scan_size << endl;
         }
 
         count++;

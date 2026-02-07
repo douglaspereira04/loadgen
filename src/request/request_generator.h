@@ -14,28 +14,18 @@ namespace workload {
 class RequestGenerator {
 public:
     /// Constructor from a TOML config file path.
-    RequestGenerator(const std::string& config_path);
+    RequestGenerator(const std::string &config_path);
 
     /// Constructor from explicit parameters (all entries of the TOML file).
-    RequestGenerator(
-        const std::string& export_path,
-        bool gen_values,
-        long value_min_size,
-        long value_max_size,
-        long key_seed,
-        long operation_seed,
-        int n_records,
-        int n_operations,
-        const std::string& data_distribution,
-        double read_proportion,
-        double update_proportion,
-        double insert_proportion,
-        double scan_proportion,
-        long scan_seed,
-        const std::string& scan_length_distribution,
-        int min_scan_length,
-        int max_scan_length
-    );
+    RequestGenerator(const std::string &export_path, bool gen_values,
+                     long value_min_size, long value_max_size, long key_seed,
+                     long operation_seed, int n_records, int n_operations,
+                     const std::string &data_distribution,
+                     double read_proportion, double update_proportion,
+                     double insert_proportion, double scan_proportion,
+                     long scan_seed,
+                     const std::string &scan_length_distribution,
+                     int min_scan_length, int max_scan_length);
 
     ~RequestGenerator();
 
@@ -43,25 +33,23 @@ public:
     /// Equivalent to generate_export_requests. Inserts are auto-acknowledged.
     void generate_to_file();
 
-
     /// Get the next operation.
     /// @param[in] values       The operation types and their probabilities.
     /// @param[in] generator    The generator for the operation.
     /// @return The next operation.
-    Type next_operation(
-        std::vector<std::pair<Type,double>> values, 
-        rfunc::DoubleRandFunction *generator
-    );
-
+    Type next_operation(std::vector<std::pair<Type, double>> values,
+                        rfunc::DoubleRandFunction *generator);
 
     /// Get the next operation.
     /// @param[out] type       The operation type (READ, WRITE, SCAN).
     /// @param[out] key        The key for the operation.
-    /// @param[out] value      The value string (non-empty only for WRITEs when gen_values is on).
-    /// @param[out] scan_size  The scan length (non-zero only for SCAN operations).
+    /// @param[out] value      The value string (non-empty only for WRITEs when
+    /// gen_values is on).
+    /// @param[out] scan_size  The scan length (non-zero only for SCAN
+    /// operations).
     /// @return true if the workload has ended (no operation produced),
     ///         false if a valid operation was returned.
-    bool next(Type& type, long& key, std::string& value, long& scan_size);
+    bool next(Type &type, long &key, std::string &value, long &scan_size);
 
     /// Increment the acknowledged counter for the given key.
     /// Must be called by the user after a WRITE/INSERT is confirmed.
@@ -90,13 +78,17 @@ private:
     int max_scan_length_;
 
     // ── Phase tracking ─────────────────────────────────────────────────
-    enum class Phase { LOADING, OPERATIONS, DONE };
+    enum class Phase {
+        LOADING,
+        OPERATIONS,
+        DONE
+    };
     Phase phase_;
     int loading_index_;
     int operations_index_;
     long long n_requests_;
 
-    acknowledged_counter<long>* insert_key_sequence_;
+    acknowledged_counter<long> *insert_key_sequence_;
 
     // ── Generators ─────────────────────────────────────────────────────
     std::vector<std::pair<Type, double>> operation_proportions_;
