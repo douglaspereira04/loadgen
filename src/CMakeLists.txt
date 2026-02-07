@@ -32,6 +32,9 @@ target_include_directories(loadgen-core PUBLIC
     ${CMAKE_SOURCE_DIR}/src/types
 )
 
+# Alias for modern CMake consumers/Fetched projects.
+add_library(loadgen::core ALIAS loadgen-core)
+
 # Optional: Build gen executable
 if(BUILD_LOADGEN_GEN)
     add_executable(gen 

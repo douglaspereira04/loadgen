@@ -36,6 +36,24 @@ cmake --build . -j"$(nproc)"
 
 Link against `libloadgen-core.a` or build the optional `gen` tool by enabling `BUILD_LOADGEN_GEN` in this step.
 
+### FetchContent-friendly integration
+
+Long-lived targets are exported through the `loadgen::core` alias, making this project compatible with `FetchContent`.
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+    loadgen
+    GIT_REPOSITORY https://github.com/douglaspereira04/loadgen.git
+    GIT_TAG main
+)
+
+FetchContent_MakeAvailable(loadgen)
+
+target_link_libraries(myapp PRIVATE loadgen::core)
+```
+
 ## Generating workloads
 
 The optional `gen` executable reads a TOML configuration file and generates requests to the `output.requests.export_path` value:
