@@ -1,10 +1,9 @@
-#include "export_request_generator.h"
+#include "request_generator.h"
 #include "../../external/toml11/include/toml.hpp"
 
 #include <iostream>
 #include <iomanip>
 #include <thread>
-#include <chrono>
 #include <cassert>
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
@@ -197,7 +196,7 @@ void RequestGenerator::init() {
 
 Type RequestGenerator::next_operation(
     std::vector<std::pair<Type,double>> values, 
-    DoubleRandFunction *generator
+    rfunc::DoubleRandFunction *generator
 ) {
     double sum = 0;
     

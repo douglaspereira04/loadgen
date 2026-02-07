@@ -6,7 +6,7 @@
 #include <vector>
 #include <utility>
 
-#include "request_generation.h"
+#include "char_generator.h"
 #include "acknowledged_counter.h"
 
 namespace workload {
@@ -50,7 +50,7 @@ public:
     /// @return The next operation.
     Type next_operation(
         std::vector<std::pair<Type,double>> values, 
-        DoubleRandFunction *generator
+        rfunc::DoubleRandFunction *generator
     );
 
 

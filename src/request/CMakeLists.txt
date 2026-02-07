@@ -1,7 +1,7 @@
 add_library(request
     random.cpp
-    request_generation.cpp
-    export_request_generator.cpp
+    char_generator.cpp
+    request_generator.cpp
 )
 
 target_include_directories(request
