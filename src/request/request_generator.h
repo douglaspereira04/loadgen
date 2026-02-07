@@ -13,8 +13,29 @@ namespace workload {
 
 class RequestGenerator {
 public:
+    struct Configuration {
+        std::string export_path;
+        bool gen_values = false;
+        long value_min_size = 0;
+        long value_max_size = 0;
+        long key_seed = 0;
+        long operation_seed = 0;
+        int n_records = 0;
+        int n_operations = 0;
+        std::string data_distribution = "UNIFORM";
+        double read_proportion = 0.0;
+        double update_proportion = 0.0;
+        double insert_proportion = 0.0;
+        double scan_proportion = 0.0;
+        long scan_seed = 0;
+        std::string scan_length_distribution = "UNIFORM";
+        int min_scan_length = 1;
+        int max_scan_length = 1000;
+    };
+
     /// Constructor from a TOML config file path.
-    RequestGenerator(const std::string &config_path);
+    RequestGenerator(const std::string &config_path,
+                     bool initialize_immediately = true);
 
     /// Constructor from explicit parameters (all entries of the TOML file).
     RequestGenerator(const std::string &export_path, bool gen_values,
@@ -55,27 +76,22 @@ public:
     /// Must be called by the user after a WRITE/INSERT is confirmed.
     void acknowledge(long key);
 
+    /// Reload configuration from TOML without instantiating generators.
+    void load_config(const std::string &config_path);
+    /// Finalize initialization after the configuration is ready.
+    void initialize();
+    /// Mutable view of the pending configuration.
+    Configuration &config();
+    /// Const view of the pending configuration.
+    const Configuration &config() const;
+    /// True once the generator has been initialized.
+    bool is_initialized() const;
+
 private:
     void init();
 
-    // ── Configuration ──────────────────────────────────────────────────
-    std::string export_path_;
-    bool gen_values_;
-    long value_min_size_;
-    long value_max_size_;
-    long key_seed_;
-    long operation_seed_;
-    int n_records_;
-    int n_operations_;
-    std::string data_distribution_str_;
-    double read_proportion_;
-    double update_proportion_;
-    double insert_proportion_;
-    double scan_proportion_;
-    long scan_seed_;
-    std::string scan_length_distribution_str_;
-    int min_scan_length_;
-    int max_scan_length_;
+    Configuration config_;
+    bool initialized_ = false;
 
     // ── Phase tracking ─────────────────────────────────────────────────
     enum class Phase {
