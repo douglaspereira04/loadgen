@@ -43,6 +43,17 @@ public:
     /// Equivalent to generate_export_requests. Inserts are auto-acknowledged.
     void generate_to_file();
 
+
+    /// Get the next operation.
+    /// @param[in] values       The operation types and their probabilities.
+    /// @param[in] generator    The generator for the operation.
+    /// @return The next operation.
+    Type next_operation(
+        std::vector<std::pair<Type,double>> values, 
+        DoubleRandFunction *generator
+    );
+
+
     /// Get the next operation.
     /// @param[out] type       The operation type (READ, WRITE, SCAN).
     /// @param[out] key        The key for the operation.

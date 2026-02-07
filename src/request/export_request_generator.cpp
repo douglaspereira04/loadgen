@@ -194,6 +194,32 @@ void RequestGenerator::init() {
     operations_index_ = 0;
 }
 
+
+Type RequestGenerator::next_operation(
+    std::vector<std::pair<Type,double>> values, 
+    DoubleRandFunction *generator
+) {
+    double sum = 0;
+    
+    for (size_t i = 0; i < values.size(); i++) {
+       sum += values[i].second;
+    }
+
+    double val = (*generator)();
+
+    for (size_t i = 0; i < values.size(); i++) {
+        double vw = values[i].second / sum;
+        if (val < vw) {
+            return values[i].first;
+        }
+
+        val -= vw;
+    }
+
+    throw invalid_argument("Something went wrong");
+
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // next()  –  returns true when the workload has ended
 // ────────────────────────────────────────────────────────────────────────

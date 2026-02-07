@@ -16,14 +16,6 @@
 namespace workload {
     using namespace rfunc;
 
-
-void create_requests(std::string config_path);
-
-Type next_operation(
-    std::vector<std::pair<Type,double>> values, 
-    rfunc::DoubleRandFunction *generator
-);
-
 class CharGenerator{
 public:
     CharGenerator(long seed = std::mt19937::default_seed){
@@ -37,9 +29,6 @@ private:
     static const size_t __CHARSET_LEN;
     RandFunction __generator;
 };
-
-size_t gen_value(char* out_str, CharGenerator *char_generator, RandFunction *len_generator, size_t min_len, size_t max_len);
-
 
 }
 
