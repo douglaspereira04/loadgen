@@ -242,6 +242,10 @@ loadgen::types::Type RequestGenerator::next_operation(
     throw invalid_argument("Something went wrong");
 }
 
+RequestGenerator::Phase RequestGenerator::current_phase() const {
+    return phase_;
+}
+
 void RequestGenerator::skip_current_phase() {
     if (phase_ == Phase::LOADING) {
         phase_ = Phase::OPERATIONS;

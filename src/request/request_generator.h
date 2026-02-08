@@ -14,6 +14,13 @@ namespace workload {
 
 class RequestGenerator {
 public:
+    // ── Phase tracking ─────────────────────────────────────────────────
+    enum class Phase {
+        LOADING,
+        OPERATIONS,
+        DONE
+    };
+
     struct Configuration {
         std::string export_path;
         bool gen_values = false;
@@ -93,18 +100,14 @@ public:
     /// Skip the current phase and move to the next one.
     void skip_current_phase();
 
+    /// Get the current phase.
+    Phase current_phase() const;
+
 private:
     void init();
 
     Configuration config_;
     bool initialized_ = false;
-
-    // ── Phase tracking ─────────────────────────────────────────────────
-    enum class Phase {
-        LOADING,
-        OPERATIONS,
-        DONE
-    };
     Phase phase_;
     int loading_index_;
     int operations_index_;
