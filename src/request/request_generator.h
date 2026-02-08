@@ -90,6 +90,9 @@ public:
     /// True once the generator has been initialized.
     bool is_initialized() const;
 
+    /// Skip the current phase and move to the next one.
+    void skip_current_phase();
+
 private:
     void init();
 

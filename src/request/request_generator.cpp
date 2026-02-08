@@ -242,6 +242,14 @@ loadgen::types::Type RequestGenerator::next_operation(
     throw invalid_argument("Something went wrong");
 }
 
+void RequestGenerator::skip_current_phase() {
+    if (phase_ == Phase::LOADING) {
+        phase_ = Phase::OPERATIONS;
+    } else if (phase_ == Phase::OPERATIONS) {
+        phase_ = Phase::DONE;
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // next()  –  returns true when the workload has ended
 // ────────────────────────────────────────────────────────────────────────
