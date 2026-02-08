@@ -283,6 +283,11 @@ bool RequestGenerator::next(loadgen::types::Type &type, long &key,
             }
 
             loading_index_++;
+            if (loading_index_ >= config_.n_records) {
+                // Loading finished → move to operations
+                phase_ = Phase::OPERATIONS;
+            }
+
             return false;
         }
         // Loading finished → move to operations
