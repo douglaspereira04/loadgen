@@ -257,13 +257,14 @@ void RequestGenerator::skip_current_phase() {
 // ────────────────────────────────────────────────────────────────────────
 // next()  –  returns true when the workload has ended
 // ────────────────────────────────────────────────────────────────────────
-bool RequestGenerator::next(loadgen::types::Type &type, long &key,
-                            std::string &value, long &scan_size) {
+RequestGenerator::Phase RequestGenerator::next(loadgen::types::Type &type,
+                                               long &key, std::string &value,
+                                               long &scan_size) {
     value.clear();
     scan_size = 0;
 
     if (phase_ == Phase::DONE) {
-        return true;
+        return phase_;
     }
 
     // ── Loading phase: emit initial records (WRITE keys 0 … n_records-1) ──
@@ -283,12 +284,8 @@ bool RequestGenerator::next(loadgen::types::Type &type, long &key,
             }
 
             loading_index_++;
-            if (loading_index_ >= config_.n_records) {
-                // Loading finished → move to operations
-                phase_ = Phase::OPERATIONS;
-            }
 
-            return false;
+            return phase_;
         }
         // Loading finished → move to operations
         phase_ = Phase::OPERATIONS;
@@ -332,13 +329,13 @@ bool RequestGenerator::next(loadgen::types::Type &type, long &key,
             }
 
             operations_index_++;
-            return false;
+            return phase_;
         }
 
         phase_ = Phase::DONE;
     }
 
-    return true; // workload ended
+    return phase_; // workload ended
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -353,12 +350,22 @@ void RequestGenerator::acknowledge(long key) {
 // ────────────────────────────────────────────────────────────────────────
 void RequestGenerator::generate_to_file() {
     cout << "Generating " << config_.export_path << " ..." << endl;
+    auto progress_thread = thread(export_print_progress, &progress_);
+    generate_to_file(config_.export_path, false);
+
+    progress_thread.join();
+
+    cout << "number of writes/reads to keys: " << n_requests_ << endl;
+    cout << "Generated into " << config_.export_path << endl;
+}
+
+void RequestGenerator::generate_to_file(const std::string &filename,
+                                        bool skip_loading) {
 
     float total = static_cast<float>(config_.n_records + config_.n_operations);
-    double progress = 0;
-    auto progress_thread = std::thread(export_print_progress, &progress);
+    progress_ = 0;
 
-    ofstream ofs(config_.export_path, ofstream::out);
+    ofstream ofs(filename, ofstream::out);
 
     loadgen::types::Type type;
     long key;
@@ -366,7 +373,16 @@ void RequestGenerator::generate_to_file() {
     long scan_size;
     long count = 0;
 
-    while (!next(type, key, value, scan_size)) {
+    while (true) {
+        Phase phase = next(type, key, value, scan_size);
+        if (phase == Phase::DONE) {
+            break;
+        }
+
+        if (skip_loading && phase == Phase::LOADING) {
+            continue;
+        }
+
         if (type == loadgen::types::Type::READ) {
             ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
                 << key << endl;
@@ -384,14 +400,10 @@ void RequestGenerator::generate_to_file() {
         }
 
         count++;
-        progress = count / total;
+        progress_ = count / total;
     }
 
-    progress = 1.0;
-    progress_thread.join();
-
-    cout << "number of writes/reads to keys: " << n_requests_ << endl;
-    cout << "Generated into " << config_.export_path << endl;
+    progress_ = 1.0;
     ofs.flush();
     ofs.close();
 }

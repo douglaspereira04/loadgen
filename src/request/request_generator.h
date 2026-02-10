@@ -62,6 +62,12 @@ public:
     /// Equivalent to generate_export_requests. Inserts are auto-acknowledged.
     void generate_to_file();
 
+    /// Generate all operations and dump them into the given file.
+    /// @param[in] filename The name of the file to dump the operations to.
+    /// @param[in] skip_loading Whether to skip the loading phase.
+    void generate_to_file(const std::string &filename,
+                          bool skip_loading = false);
+
     /// Get the next operation.
     /// @param[in] values       The operation types and their probabilities.
     /// @param[in] generator    The generator for the operation.
@@ -77,10 +83,9 @@ public:
     /// gen_values is on).
     /// @param[out] scan_size  The scan length (non-zero only for SCAN
     /// operations).
-    /// @return true if the workload has ended (no operation produced),
-    ///         false if a valid operation was returned.
-    bool next(loadgen::types::Type &type, long &key, std::string &value,
-              long &scan_size);
+    /// @return phase of the returned operation
+    Phase next(loadgen::types::Type &type, long &key, std::string &value,
+               long &scan_size);
 
     /// Increment the acknowledged counter for the given key.
     /// Must be called by the user after a WRITE/INSERT is confirmed.
@@ -112,6 +117,7 @@ private:
     int loading_index_;
     int operations_index_;
     long long n_requests_;
+    double progress_;
 
     acknowledged_counter<long> *insert_key_sequence_;
 
