@@ -74,6 +74,26 @@ void run_workload_and_output_to_file(workload::RequestGenerator *generator,
     }
 }
 
+struct operation_t {
+    loadgen::types::Type type;
+    long key;
+    std::string value;
+    long scan_size;
+};
+void run_workload_for_benchmark(workload::RequestGenerator *generator) {
+    std::vector<operation_t> operations;
+    while (true) {
+        operation_t operation;
+        workload::RequestGenerator::Phase phase =
+            generator->next(operation.type, operation.key, operation.value,
+                            operation.scan_size);
+        if (phase == workload::RequestGenerator::Phase::DONE) {
+            break;
+        }
+        operations.push_back(operation);
+    }
+}
+
 namespace workload {
 using namespace std;
 using namespace rfunc;
@@ -450,5 +470,30 @@ void RequestGenerator::generate_to_file(const std::string &filename,
     progress_ = 1.0;
     ofs.flush();
     ofs.close();
+}
+
+void RequestGenerator::benchmark(int num_threads) {
+
+    cout << "Benchmarking...";
+    cout.flush();
+    // time the benchmark
+    auto start = std::chrono::high_resolution_clock::now();
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < num_threads; i++) {
+        threads.push_back(std::thread(&run_workload_for_benchmark, this));
+    }
+    for (auto &thread : threads) {
+        thread.join();
+    }
+
+    cout << " [DONE]" << endl;
+
+    // output time in seconds
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    cout << "Benchmark took " << duration.count() << " milliseconds; "
+         << duration.count() / 1000.0 << " seconds" << endl;
 }
 } // namespace workload

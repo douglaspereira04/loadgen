@@ -62,6 +62,9 @@ public:
     /// Equivalent to generate_export_requests. Inserts are auto-acknowledged.
     void generate_to_file(int num_threads = 1);
 
+    /// Benchmark the generator.
+    void benchmark(int num_threads = 1);
+
     /// Generate all operations and dump them into the given file.
     /// @param[in] filename The name of the file to dump the operations to.
     /// @param[in] skip_loading Whether to skip the loading phase.

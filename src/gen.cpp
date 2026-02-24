@@ -11,6 +11,8 @@ int main(int argc, char const *argv[]) {
     }
     workload::RequestGenerator generator(argv[1]);
     generator.generate_to_file(num_threads);
+    workload::RequestGenerator benchmarker(argv[1]);
+    benchmarker.benchmark(num_threads);
 
     return 0;
 }
