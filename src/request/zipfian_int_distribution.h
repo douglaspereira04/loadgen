@@ -2,7 +2,7 @@
 #define RFUNC_ZIPFIAN_H
 
 #include <cmath>
-#include <mutex>
+#include <shared_mutex>
 
 template <typename _IntType = int> class zipfian_int_distribution {
 
@@ -30,7 +30,7 @@ public:
         eta = t.eta;
         theta = t.theta;
         zeta2theta = t.zeta2theta;
-        countforzeta = t.countforzeta;
+        countforzeta_ = t.countforzeta_;
         allowitemcountdecrease = t.allowitemcountdecrease;
         lastvalue = t.lastvalue;
     }
@@ -46,21 +46,33 @@ public:
         constexpr auto __urngmin = _UniformRandomBitGenerator::min();
         constexpr auto __urngmax = _UniformRandomBitGenerator::max();
 
+        mutex_.lock_shared();
+        long countforzeta = countforzeta_;
+        mutex_.unlock_shared();
+
         if (itemcount != countforzeta) {
-            if (itemcount > countforzeta) {
-                zetan = zeta(countforzeta, itemcount, theta, zetan);
+            mutex_.lock();
+            if (itemcount > countforzeta_) {
+                zetan = zeta(countforzeta_, itemcount, theta, zetan);
                 eta = (1 - pow(2.0 / items, 1 - theta)) /
                       (1 - zeta2theta / zetan);
-            } else if ((itemcount < countforzeta) && (allowitemcountdecrease)) {
+            } else if ((itemcount < countforzeta_) &&
+                       (allowitemcountdecrease)) {
                 zetan = zeta(itemcount, theta);
                 eta = (1 - pow(2.0 / items, 1 - theta)) /
                       (1 - zeta2theta / zetan);
             }
+            mutex_.unlock();
         }
 
+        rng_mutex_.lock();
         double random = (double)__urng();
+        rng_mutex_.unlock();
+
         double u = (double)((random - __urngmin) / (__urngmax - __urngmin));
+        mutex_.lock_shared();
         double uz = u * zetan;
+        mutex_.unlock_shared();
 
         if (uz < 1.0) {
             return base;
@@ -70,8 +82,10 @@ public:
             return base + 1;
         }
 
+        mutex_.lock_shared();
         _IntType ret =
             base + (_IntType)((itemcount)*pow(eta * u - eta + 1, alpha));
+        mutex_.unlock_shared();
         lastvalue = ret;
         return ret;
     }
@@ -87,7 +101,7 @@ protected:
         zeta2theta = zeta(2, theta);
         alpha = 1.0 / (1.0 - theta);
         zetan = zetan_;
-        countforzeta = items;
+        countforzeta_ = items;
         eta = (1 - pow(2.0 / items, 1 - theta)) / (1 - zeta2theta / zetan);
     }
 
@@ -97,7 +111,7 @@ protected:
     }
 
     double zeta(long n, double thetaVal) {
-        countforzeta = n;
+        countforzeta_ = n;
         return zetastatic(n, thetaVal);
     }
 
@@ -106,7 +120,7 @@ protected:
     }
 
     double zeta(long st, long n, double thetaVal, double initialsum) {
-        countforzeta = n;
+        countforzeta_ = n;
         return zetastatic(st, n, thetaVal, initialsum);
     }
 
@@ -129,9 +143,11 @@ protected:
     _IntType base;
     double zipfianconstant;
     double alpha, zetan, eta, theta, zeta2theta;
-    _IntType countforzeta;
+    _IntType countforzeta_;
     bool allowitemcountdecrease = false;
     _IntType lastvalue = 0;
+    std::mutex rng_mutex_;
+    std::shared_mutex mutex_;
 };
 
 #endif

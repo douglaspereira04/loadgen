@@ -60,13 +60,13 @@ public:
 
     /// Generate all operations and dump them into the export file.
     /// Equivalent to generate_export_requests. Inserts are auto-acknowledged.
-    void generate_to_file();
+    void generate_to_file(int num_threads = 1);
 
     /// Generate all operations and dump them into the given file.
     /// @param[in] filename The name of the file to dump the operations to.
     /// @param[in] skip_loading Whether to skip the loading phase.
     void generate_to_file(const std::string &filename,
-                          bool skip_loading = false);
+                          bool skip_loading = false, int num_threads = 1);
 
     /// Get the next operation.
     /// @param[in] values       The operation types and their probabilities.
@@ -114,8 +114,9 @@ private:
     Configuration config_;
     bool initialized_ = false;
     Phase phase_;
-    int loading_index_;
-    int operations_index_;
+    std::atomic_int loading_index_;
+    std::atomic_int operations_index_;
+    std::mutex mtx_;
     long long n_requests_;
     double progress_;
 

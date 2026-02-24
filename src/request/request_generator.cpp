@@ -21,6 +21,59 @@ static void export_print_progress(double *percentage) {
     std::cout << std::endl;
 }
 
+void run_workload_and_output_to_file(workload::RequestGenerator *generator,
+                                     std::vector<std::string> *rows,
+                                     std::mutex *progress_lock,
+                                     std::mutex *rows_lock, bool skip_loading,
+                                     double *progress_ptr, long *count_ptr,
+                                     float total) {
+    while (true) {
+        loadgen::types::Type type;
+        long key;
+        std::string value;
+        long scan_size;
+        workload::RequestGenerator::Phase phase =
+            generator->next(type, key, value, scan_size);
+        if (phase == workload::RequestGenerator::Phase::DONE) {
+            break;
+        }
+
+        if (skip_loading &&
+            phase == workload::RequestGenerator::Phase::LOADING) {
+            continue;
+        }
+
+        // string with 10 leading zeros
+        std::string key_str = std::to_string(key);
+        key_str = std::string(10 - key_str.length(), '0') + key_str;
+        std::string type_str = std::to_string(static_cast<int>(type));
+        std::string row;
+        if (type == loadgen::types::Type::READ) {
+            row = type_str + "," + key_str + "\n";
+        } else if (type == loadgen::types::Type::WRITE) {
+            row = type_str + "," + key_str;
+            if (!value.empty()) {
+                row += "," + value;
+            }
+            row += "\n";
+
+            generator->acknowledge(key);
+        } else if (type == loadgen::types::Type::SCAN) {
+            row = type_str + "," + key_str + "," + std::to_string(scan_size) +
+                  "\n";
+        }
+
+        rows_lock->lock();
+        rows->push_back(row);
+        rows_lock->unlock();
+
+        progress_lock->lock();
+        (*count_ptr)++;
+        (*progress_ptr) = (*count_ptr) / total;
+        progress_lock->unlock();
+    }
+}
+
 namespace workload {
 using namespace std;
 using namespace rfunc;
@@ -263,15 +316,20 @@ RequestGenerator::Phase RequestGenerator::next(loadgen::types::Type &type,
     value.clear();
     scan_size = 0;
 
-    if (phase_ == Phase::DONE) {
-        return phase_;
+    mtx_.lock();
+    Phase phase = phase_;
+    mtx_.unlock();
+
+    if (phase == Phase::DONE) {
+        return phase;
     }
 
     // ── Loading phase: emit initial records (WRITE keys 0 … n_records-1) ──
-    if (phase_ == Phase::LOADING) {
-        if (loading_index_ < config_.n_records) {
+    if (phase == Phase::LOADING) {
+        int loading_index = loading_index_.fetch_add(1);
+        if (loading_index < config_.n_records) {
             type = loadgen::types::Type::WRITE;
-            key = loading_index_;
+            key = loading_index;
 
             if (config_.gen_values) {
                 char buf[MAX_VALUE_LEN + 1];
@@ -283,17 +341,19 @@ RequestGenerator::Phase RequestGenerator::next(loadgen::types::Type &type,
                 value.assign(buf, static_cast<size_t>(length));
             }
 
-            loading_index_++;
-
-            return phase_;
+            return phase;
         }
         // Loading finished → move to operations
-        phase_ = Phase::OPERATIONS;
+        mtx_.lock();
+        phase = Phase::OPERATIONS;
+        phase_ = phase;
+        mtx_.unlock();
     }
 
+    int operations_index = operations_index_.fetch_add(1);
     // ── Operations phase ──────────────────────────────────────────────
-    if (phase_ == Phase::OPERATIONS) {
-        if (operations_index_ < config_.n_operations) {
+    if (phase == Phase::OPERATIONS) {
+        if (operations_index < config_.n_operations) {
             type =
                 next_operation(operation_proportions_, &operation_generator_);
 
@@ -309,7 +369,6 @@ RequestGenerator::Phase RequestGenerator::next(loadgen::types::Type &type,
             } else if (type == loadgen::types::Type::SCAN) {
                 long size = scan_length_generator_();
                 scan_size = size;
-                n_requests_ += (size - 1);
                 do {
                     key = data_generator_();
                 } while (key + size >= insert_key_sequence_->last_value());
@@ -328,14 +387,16 @@ RequestGenerator::Phase RequestGenerator::next(loadgen::types::Type &type,
                 value.assign(buf, static_cast<size_t>(length));
             }
 
-            operations_index_++;
-            return phase_;
+            return phase;
         }
 
-        phase_ = Phase::DONE;
+        mtx_.lock();
+        phase = Phase::DONE;
+        phase_ = phase;
+        mtx_.unlock();
     }
 
-    return phase_; // workload ended
+    return phase; // workload ended
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -348,10 +409,10 @@ void RequestGenerator::acknowledge(long key) {
 // ────────────────────────────────────────────────────────────────────────
 // generate_to_file()  –  dump full workload to the export file
 // ────────────────────────────────────────────────────────────────────────
-void RequestGenerator::generate_to_file() {
+void RequestGenerator::generate_to_file(int num_threads) {
     cout << "Generating " << config_.export_path << " ..." << endl;
     auto progress_thread = thread(export_print_progress, &progress_);
-    generate_to_file(config_.export_path, false);
+    generate_to_file(config_.export_path, false, num_threads);
 
     progress_thread.join();
 
@@ -360,52 +421,34 @@ void RequestGenerator::generate_to_file() {
 }
 
 void RequestGenerator::generate_to_file(const std::string &filename,
-                                        bool skip_loading) {
+                                        bool skip_loading, int num_threads) {
 
     float total = static_cast<float>(config_.n_records + config_.n_operations);
     progress_ = 0;
 
     ofstream ofs(filename, ofstream::out);
 
-    loadgen::types::Type type;
-    long key;
-    std::string value;
-    long scan_size;
     long count = 0;
 
-    while (true) {
-        Phase phase = next(type, key, value, scan_size);
-        if (phase == Phase::DONE) {
-            break;
-        }
+    std::vector<std::thread> threads;
+    std::mutex progress_lock;
+    std::mutex rows_lock;
+    std::vector<std::string> rows;
+    for (int i = 0; i < num_threads; i++) {
+        threads.push_back(std::thread(&run_workload_and_output_to_file, this,
+                                      &rows, &progress_lock, &rows_lock,
+                                      skip_loading, &progress_, &count, total));
+    }
+    for (auto &thread : threads) {
+        thread.join();
+    }
 
-        if (skip_loading && phase == Phase::LOADING) {
-            continue;
-        }
-
-        if (type == loadgen::types::Type::READ) {
-            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
-                << key << endl;
-        } else if (type == loadgen::types::Type::WRITE) {
-            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
-                << key;
-            if (!value.empty()) {
-                ofs << "," << value;
-            }
-            ofs << endl;
-            acknowledge(key);
-        } else if (type == loadgen::types::Type::SCAN) {
-            ofs << static_cast<int>(type) << "," << setfill('0') << setw(10)
-                << key << "," << scan_size << endl;
-        }
-
-        count++;
-        progress_ = count / total;
+    for (const auto &row : rows) {
+        ofs << row;
     }
 
     progress_ = 1.0;
     ofs.flush();
     ofs.close();
 }
-
 } // namespace workload
