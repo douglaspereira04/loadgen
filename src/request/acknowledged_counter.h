@@ -20,7 +20,7 @@ public:
     }
 
     acknowledged_counter(acknowledged_counter &other) {
-        counter_ = other.count_start;
+        counter_ = other.counter_;
         limit_ = other.limit_;
         window_ = other.window_;
     }
